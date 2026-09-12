@@ -28,6 +28,7 @@ public sealed class CreateUserCommandHandler(
         var user = User.Create(new TenantId(tenant.Id), new Email(request.Email), BCrypt.Net.BCrypt.HashPassword(request.Password), role);
 
         await userRepository.AddAsync(user, cancellationToken);
+        await userRepository.SetSystemRoleAsync(user, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return user.Id;
     }
