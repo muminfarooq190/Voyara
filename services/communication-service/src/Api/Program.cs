@@ -100,10 +100,11 @@ public sealed class Program
             client.BaseAddress = new Uri(builder.Configuration["IDENTITY_SERVICE_URL"] ?? "http://localhost:8080/");
         });
         builder.Services.AddScoped<IBrandingTemplateRenderer, IdentityBackedBrandingTemplateRenderer>();
+        builder.Services.AddTransient<CommunicationService.Infrastructure.Http.ForwardAuthHeadersHandler>();
         builder.Services.AddHttpClient<IBillingEntitlementsClient, BillingEntitlementsClient>(client =>
         {
             client.BaseAddress = new Uri(builder.Configuration["BILLING_SERVICE_URL"] ?? "http://localhost:5080/");
-        });
+        }).AddHttpMessageHandler<CommunicationService.Infrastructure.Http.ForwardAuthHeadersHandler>();
         builder.Services.AddHttpClient<IRecipientAddressResolver, TravelContactRecipientAddressResolver>(client =>
         {
             client.BaseAddress = new Uri(builder.Configuration["TRAVEL_SERVICE_URL"] ?? "http://localhost:5060/");
