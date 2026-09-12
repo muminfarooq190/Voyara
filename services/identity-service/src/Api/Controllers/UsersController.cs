@@ -39,6 +39,7 @@ public sealed class UsersController(IMediator mediator, ITenantContext tenantCon
     [HttpGet("{userId:guid}")]
     public async Task<IActionResult> GetById(Guid userId, CancellationToken cancellationToken)
     {
+        await EnsureTenantUserAsync(userId, cancellationToken);
         var user = await mediator.Send(new GetUserByIdQuery(userId), cancellationToken);
         return Ok(user);
     }
@@ -46,6 +47,7 @@ public sealed class UsersController(IMediator mediator, ITenantContext tenantCon
     [HttpPut("{userId:guid}")]
     public async Task<IActionResult> Update(Guid userId, [FromBody] UpdateUserRequest request, CancellationToken cancellationToken)
     {
+        await EnsureTenantUserAsync(userId, cancellationToken);
         await mediator.Send(new UpdateUserCommand(userId, request.Role, request.Password), cancellationToken);
         var user = await mediator.Send(new GetUserByIdQuery(userId), cancellationToken);
         return Ok(user);
@@ -54,6 +56,7 @@ public sealed class UsersController(IMediator mediator, ITenantContext tenantCon
     [HttpDelete("{userId:guid}")]
     public async Task<IActionResult> Delete(Guid userId, CancellationToken cancellationToken)
     {
+        await EnsureTenantUserAsync(userId, cancellationToken);
         await mediator.Send(new DeleteUserCommand(userId), cancellationToken);
         return NoContent();
     }
@@ -66,6 +69,7 @@ public sealed class UsersController(IMediator mediator, ITenantContext tenantCon
     [HttpPost("{userId:guid}/delete-and-anonymize")]
     public async Task<IActionResult> DeleteAndAnonymize(Guid userId, CancellationToken cancellationToken)
     {
+        await EnsureTenantUserAsync(userId, cancellationToken);
         await mediator.Send(new AnonymizeUserCommand(userId), cancellationToken);
         dbContext.IdentityAuditLogs.Add(IdentityAuditLog.Create(tenantContext.TenantId, ResolveActorUserId(), userId, "UserAnonymized", null, null, HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString()));
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -75,6 +79,7 @@ public sealed class UsersController(IMediator mediator, ITenantContext tenantCon
     [HttpPost("{userId:guid}/suspend")]
     public async Task<IActionResult> Suspend(Guid userId, CancellationToken cancellationToken)
     {
+        await EnsureTenantUserAsync(userId, cancellationToken);
         var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId && x.DeletedAt == null, cancellationToken)
             ?? throw new NotFoundException("User not found.");
         user.Suspend();
@@ -86,12 +91,19 @@ public sealed class UsersController(IMediator mediator, ITenantContext tenantCon
     [HttpPost("{userId:guid}/reactivate")]
     public async Task<IActionResult> Reactivate(Guid userId, CancellationToken cancellationToken)
     {
+        await EnsureTenantUserAsync(userId, cancellationToken);
         var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId && x.DeletedAt == null, cancellationToken)
             ?? throw new NotFoundException("User not found.");
         user.Reactivate();
         dbContext.IdentityAuditLogs.Add(IdentityAuditLog.Create(user.TenantId, ResolveActorUserId(), user.Id, "UserReactivated", null, $"{{\"status\":\"{user.Status}\"}}", HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString()));
         await dbContext.SaveChangesAsync(cancellationToken);
         return Ok(new { user.Id, Status = user.Status.ToString() });
+    }
+
+    private async Task EnsureTenantUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        if (!await dbContext.Users.AnyAsync(x => x.Id == userId && x.TenantId == tenantContext.TenantId && x.DeletedAt == null, cancellationToken))
+            throw new NotFoundException("User not found.");
     }
 
     private Guid ResolveActorUserId()
