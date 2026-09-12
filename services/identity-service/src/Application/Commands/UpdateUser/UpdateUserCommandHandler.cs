@@ -22,6 +22,7 @@ public sealed class UpdateUserCommandHandler(IUserRepository userRepository, IUn
         }
 
         await userRepository.UpdateAsync(user, cancellationToken);
+        await userRepository.SetSystemRoleAsync(user, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

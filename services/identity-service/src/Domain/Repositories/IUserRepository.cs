@@ -9,4 +9,5 @@ public interface IUserRepository
     Task<IReadOnlyList<User>> GetByTenantAsync(Guid tenantId, CancellationToken cancellationToken);
     Task AddAsync(User user, CancellationToken cancellationToken);
     Task UpdateAsync(User user, CancellationToken cancellationToken);
+    Task SetSystemRoleAsync(User user, CancellationToken cancellationToken);
 }

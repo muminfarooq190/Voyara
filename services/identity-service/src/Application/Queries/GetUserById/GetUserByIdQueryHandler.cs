@@ -12,18 +12,18 @@ public sealed class GetUserByIdQueryHandler(IReadDbConnectionFactory connectionF
     {
         using var connection = await connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         const string sql = """
-            SELECT id,
-                   tenant_id AS TenantId,
-                   email,
-                   role::text AS role,
-                   status::text AS status,
+            SELECT "Id" AS id,
+                   "TenantId" AS TenantId,
+                   "Email" AS email,
+                   "Role"::text AS role,
+                   "Status"::text AS status,
                    created_at AS CreatedAt,
                    updated_at AS UpdatedAt,
                    last_login_at AS LastLoginAt,
                    password_changed_at AS PasswordChangedAt,
                    must_change_password AS MustChangePassword
             FROM users
-            WHERE id = @UserId AND deleted_at IS NULL;
+            WHERE "Id" = @UserId AND deleted_at IS NULL;
             """;
 
         var user = await connection.QuerySingleOrDefaultAsync<UserReadModel>(new CommandDefinition(sql, new { request.UserId }, cancellationToken: cancellationToken));
