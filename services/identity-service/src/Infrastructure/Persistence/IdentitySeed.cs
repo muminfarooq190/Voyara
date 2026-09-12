@@ -151,12 +151,11 @@ public static class IdentitySeed
         {
             await dbContext.Database.ExecuteSqlInterpolatedAsync(
                 $"""
-                insert into tenants ("Id", "Name", "Email", "Plan", "Status", created_at, updated_at, deleted_at)
-                values ({DemoTenantId}, {DemoTenantName}, {DemoEmail}, {"Enterprise"}, {"Active"}, now(), now(), null)
+                insert into tenants ("Id", "Name", "Email", "Status", created_at, updated_at, deleted_at)
+                values ({DemoTenantId}, {DemoTenantName}, {DemoEmail}, {"Active"}, now(), now(), null)
                 on conflict ("Id") do update
                 set "Name" = excluded."Name",
                     "Email" = excluded."Email",
-                    "Plan" = excluded."Plan",
                     "Status" = excluded."Status",
                     updated_at = now(),
                     deleted_at = null;
@@ -168,7 +167,6 @@ public static class IdentitySeed
                 update tenants
                 set "Name" = {DemoTenantName},
                     "Email" = {DemoEmail},
-                    "Plan" = {"Enterprise"},
                     "Status" = {"Active"},
                     updated_at = now(),
                     deleted_at = null
