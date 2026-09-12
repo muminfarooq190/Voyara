@@ -23,4 +23,17 @@ public sealed class UserRepository(IdentityDbContext dbContext) : IUserRepositor
         dbContext.Users.Update(user);
         return Task.CompletedTask;
     }
+
+    public async Task SetSystemRoleAsync(User user, CancellationToken cancellationToken)
+    {
+        var role = await dbContext.RoleDefinitions.SingleAsync(
+            x => x.TenantId == null && x.NormalizedName == user.Role.ToString().ToUpperInvariant(), cancellationToken);
+        var systemRoleIds = dbContext.RoleDefinitions.Where(x => x.TenantId == null).Select(x => x.Id);
+        var previous = await dbContext.UserRoleAssignments.Where(x =>
+            x.TenantId == user.TenantId && x.UserId == user.Id && systemRoleIds.Contains(x.RoleDefinitionId))
+            .ToListAsync(cancellationToken);
+        dbContext.UserRoleAssignments.RemoveRange(previous.Where(x => x.RoleDefinitionId != role.Id));
+        if (!previous.Any(x => x.RoleDefinitionId == role.Id))
+            dbContext.UserRoleAssignments.Add(UserRoleAssignment.Create(user.TenantId, user.Id, role.Id));
+    }
 }
